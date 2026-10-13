@@ -1,4 +1,4 @@
-# VibeGram - Backdated Commits (Sept 15 - Oct 12, 2026)
+# VibeGram - Backdated Commits (Sept 15 - Oct 13, 2026)
 Set-Location "c:\Users\risha\OneDrive\PROJECTS\Instagram"
 
 # Reset repo completely
@@ -300,6 +300,16 @@ git commit -m "feat: build ProfilePage with Dual-Profile mode toggle, EditProfil
 [System.Environment]::SetEnvironmentVariable("GIT_AUTHOR_DATE",$null,"Process")
 [System.Environment]::SetEnvironmentVariable("GIT_COMMITTER_DATE",$null,"Process")
 Write-Host "OK: Commit 28 - Oct 12"
+
+# ---------- COMMIT 29: Oct 13 ----------
+git add "PROJECT_SPEC.md"
+git add "server/src/__tests__/api.test.ts"
+$env:GIT_AUTHOR_DATE = "2026-10-13T11:00:00+05:30"
+$env:GIT_COMMITTER_DATE = "2026-10-13T11:00:00+05:30"
+git commit -m "chore: add automated API test suites, PROJECT_SPEC documentation and server deps"
+[System.Environment]::SetEnvironmentVariable("GIT_AUTHOR_DATE",$null,"Process")
+[System.Environment]::SetEnvironmentVariable("GIT_COMMITTER_DATE",$null,"Process")
+Write-Host "OK: Commit 29 - Oct 13"
 
 # ---------- Show log ----------
 Write-Host ""
