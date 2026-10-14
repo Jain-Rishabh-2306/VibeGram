@@ -41,7 +41,7 @@ export default function App() {
   }, [isAuthenticated, fetchMe]);
 
   return (
-    <BrowserRouter>
+    <BrowserRouter basename={import.meta.env.BASE_URL}>
       <ToastContainer />
       <Suspense fallback={<PageLoader />}>
         <Routes>
