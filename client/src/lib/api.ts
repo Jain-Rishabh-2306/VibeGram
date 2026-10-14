@@ -1,9 +1,13 @@
 import axios from 'axios';
+import { handleMockRequest } from './mockBackend';
+
+const isGitHubPages =
+  typeof window !== 'undefined' && window.location.hostname.includes('github.io');
 
 const api = axios.create({
   baseURL: '/api',
   withCredentials: true,
-  timeout: 15000,
+  timeout: 10000,
 });
 
 // Auto-refresh on 401
@@ -18,15 +22,47 @@ function processQueue(error: any, token: string | null = null) {
   failedQueue = [];
 }
 
+// Intercept request if running on GitHub Pages (static environment without Node backend)
+api.interceptors.request.use(async (config) => {
+  if (isGitHubPages) {
+    // Return mock response directly via an adapter-like behavior
+    const mockRes = await handleMockRequest(config);
+    if (mockRes) {
+      config.adapter = () => Promise.resolve(mockRes);
+    }
+  }
+  return config;
+});
+
 api.interceptors.response.use(
   (res) => res,
   async (err) => {
     const original = err.config;
+
+    // Fallback to mock backend if request failed due to missing server / 404
+    if (
+      err.response?.status === 404 ||
+      err.code === 'ERR_NETWORK' ||
+      err.code === 'ECONNABORTED' ||
+      !err.response
+    ) {
+      try {
+        const mockRes = await handleMockRequest(original);
+        if (mockRes) {
+          return mockRes;
+        }
+      } catch {
+        // fallback to normal error if mock fails
+      }
+    }
+
     if (err.response?.status === 401 && !original._retry && original.url !== '/auth/refresh') {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
-        }).then(() => api(original)).catch((e) => Promise.reject(e));
+        })
+          .then(() => api(original))
+          .catch((e) => Promise.reject(e));
       }
       original._retry = true;
       isRefreshing = true;
@@ -47,4 +83,3 @@ api.interceptors.response.use(
 );
 
 export default api;
-
