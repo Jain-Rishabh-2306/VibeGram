@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import { db } from '../config/database';
+import { uploadToStorage } from '../config/r2';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { upload } from '../middleware/upload';
 
@@ -31,7 +32,8 @@ router.post('/', authenticate, upload.array('media', 10), async (req: AuthReques
     for (let idx = 0; idx < files.length; idx++) {
       const file = files[idx];
       const isGif = file.originalname.endsWith('.gif');
-      await db.execute({ sql: 'INSERT INTO post_media (id,post_id,media_url,media_type,order_index) VALUES (?,?,?,?,?)', args: [uuidv4(), postId, `/uploads/${file.filename}`, isGif ? 'gif' : 'image', idx] });
+      const mediaUrl = await uploadToStorage(file.path, file.filename, file.mimetype);
+      await db.execute({ sql: 'INSERT INTO post_media (id,post_id,media_url,media_type,order_index) VALUES (?,?,?,?,?)', args: [uuidv4(), postId, mediaUrl, isGif ? 'gif' : 'image', idx] });
     }
     if (data.hashtags) {
       const tags = data.hashtags.split(',').map(t => t.trim().toLowerCase()).filter(Boolean);

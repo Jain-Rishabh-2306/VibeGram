@@ -4,9 +4,12 @@ import dotenv from 'dotenv';
 dotenv.config();
 
 const DB_PATH = process.env.DB_PATH || './database.db';
+const url = process.env.TURSO_DATABASE_URL || `file:${path.resolve(DB_PATH)}`;
+const authToken = process.env.TURSO_AUTH_TOKEN || undefined;
 
 export const db: Client = createClient({
-  url: `file:${path.resolve(DB_PATH)}`,
+  url,
+  authToken,
 });
 
 export async function initializeDatabase(): Promise<void> {

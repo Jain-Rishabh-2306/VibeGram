@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import { db } from '../config/database';
+import { uploadToStorage } from '../config/r2';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { upload } from '../middleware/upload';
 
@@ -50,7 +51,8 @@ router.post('/:id/media', authenticate, upload.single('media'), async (req: Auth
   if (!m.rows[0]) { res.status(403).json({ success: false, message: 'Not a member' }); return; }
   if (!req.file) { res.status(400).json({ success: false, message: 'Media file required' }); return; }
   const mediaId = uuidv4();
-  await db.execute({ sql: 'INSERT INTO album_media (id,album_id,uploaded_by,media_url,caption) VALUES (?,?,?,?,?)', args: [mediaId, req.params.id, req.userId!, `/uploads/${req.file.filename}`, req.body.caption || ''] });
+  const mediaUrl = await uploadToStorage(req.file.path, req.file.filename, req.file.mimetype);
+  await db.execute({ sql: 'INSERT INTO album_media (id,album_id,uploaded_by,media_url,caption) VALUES (?,?,?,?,?)', args: [mediaId, req.params.id, req.userId!, mediaUrl, req.body.caption || ''] });
   const media = await db.execute({ sql: 'SELECT am.*,u.username,u.full_name,u.avatar_url FROM album_media am JOIN users u ON u.id=am.uploaded_by WHERE am.id=?', args: [mediaId] });
   res.status(201).json({ success: true, media: media.rows[0] });
 });

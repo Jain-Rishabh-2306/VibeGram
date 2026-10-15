@@ -2,6 +2,7 @@ import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { z } from 'zod';
 import { db } from '../config/database';
+import { uploadToStorage } from '../config/r2';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { upload } from '../middleware/upload';
 
@@ -30,7 +31,11 @@ router.put('/me/profile', authenticate, upload.single('avatar'), async (req: Aut
     if (data.bio !== undefined) { updates.push('bio=?'); values.push(data.bio); }
     if (data.website !== undefined) { updates.push('website=?'); values.push(data.website); }
     if (data.is_private !== undefined) { updates.push('is_private=?'); values.push(data.is_private ? 1 : 0); }
-    if (req.file) { updates.push('avatar_url=?'); values.push(`/uploads/${req.file.filename}`); }
+    if (req.file) {
+      const avatarUrl = await uploadToStorage(req.file.path, req.file.filename, req.file.mimetype);
+      updates.push('avatar_url=?');
+      values.push(avatarUrl);
+    }
     if (updates.length === 0) { res.status(400).json({ success: false, message: 'Nothing to update' }); return; }
     updates.push('updated_at=?'); values.push(Math.floor(Date.now() / 1000)); values.push(req.userId!);
     await db.execute({ sql: `UPDATE users SET ${updates.join(',')} WHERE id=?`, args: values });
