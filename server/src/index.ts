@@ -37,7 +37,10 @@ const PORT = parseInt(process.env.PORT || '5000');
 
 // Security
 app.use(helmet({ crossOriginResourcePolicy: { policy: 'cross-origin' } }));
-app.use(cors({ origin: CLIENT_URL, credentials: true }));
+app.use(cors({
+  origin: process.env.CLIENT_URL || true,
+  credentials: true,
+}));
 app.use(cookieParser());
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true }));
@@ -72,17 +75,19 @@ app.get('/api/health', (_req, res) => res.json({ status: 'ok', timestamp: Date.n
 app.use(notFound);
 app.use(errorHandler);
 
-// Initialize Socket.io
-initSocket(httpServer, CLIENT_URL);
+// Initialize Socket.io (if running as standalone server)
+if (!process.env.VERCEL) {
+  initSocket(httpServer, CLIENT_URL);
 
-// Time capsule publisher — check every minute
-setInterval(() => {
-  try { publishDueCapsules(); } catch (e) { console.error('Capsule check error:', e); }
-}, 60_000);
+  // Time capsule publisher — check every minute
+  setInterval(() => {
+    try { publishDueCapsules(); } catch (e) { console.error('Capsule check error:', e); }
+  }, 60_000);
 
-httpServer.listen(PORT, () => {
-  console.log(`🚀 VibeGram API running on http://localhost:${PORT}`);
-  console.log(`📡 WebSocket ready`);
-});
+  httpServer.listen(PORT, () => {
+    console.log(`🚀 VibeGram API running on http://localhost:${PORT}`);
+    console.log(`📡 WebSocket ready`);
+  });
+}
 
 export default app;

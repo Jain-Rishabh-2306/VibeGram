@@ -4,10 +4,14 @@ import { handleMockRequest } from './mockBackend';
 const isGitHubPages =
   typeof window !== 'undefined' && window.location.hostname.includes('github.io');
 
+const apiBase = import.meta.env.VITE_API_URL
+  ? `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api`
+  : '/api';
+
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: apiBase,
   withCredentials: true,
-  timeout: 10000,
+  timeout: 15000,
 });
 
 // Auto-refresh on 401
