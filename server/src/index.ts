@@ -5,6 +5,7 @@ import helmet from 'helmet';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import path from 'path';
+import os from 'os';
 import dotenv from 'dotenv';
 
 dotenv.config();
@@ -27,8 +28,10 @@ import albumRoutes from './routes/albums';
 import capsuleRoutes from './routes/capsules';
 import exploreRoutes from './routes/explore';
 
-// Initialize database
-initializeDatabase();
+// Initialize database safely (do not block serverless cold start)
+initializeDatabase().catch((err) => {
+  console.warn('Database initialization note:', err?.message || err);
+});
 
 const app = express();
 const httpServer = http.createServer(app);
@@ -52,8 +55,28 @@ app.use('/api/', limiter);
 app.use('/api/auth/login', authLimiter);
 app.use('/api/auth/register', authLimiter);
 
-// Static uploads
-app.use('/uploads', express.static(path.resolve('./uploads')));
+// Root & Health check
+app.get('/', (_req, res) => {
+  res.json({
+    status: 'ok',
+    service: 'VibeGram API',
+    message: 'Backend is running smoothly 🚀',
+    endpoints: {
+      health: '/api/health',
+      auth: '/api/auth',
+      posts: '/api/posts',
+    },
+    timestamp: Date.now(),
+  });
+});
+
+app.get('/api/health', (_req, res) => res.json({ status: 'ok', timestamp: Date.now() }));
+
+// Static uploads (fallback)
+const staticUploadsDir = process.env.VERCEL
+  ? path.join(os.tmpdir(), 'uploads')
+  : path.resolve('./uploads');
+app.use('/uploads', express.static(staticUploadsDir));
 
 // API Routes
 app.use('/api/auth', authRoutes);
@@ -67,9 +90,6 @@ app.use('/api/events', eventRoutes);
 app.use('/api/albums', albumRoutes);
 app.use('/api/capsules', capsuleRoutes);
 app.use('/api/explore', exploreRoutes);
-
-// Health check
-app.get('/api/health', (_req, res) => res.json({ status: 'ok', timestamp: Date.now() }));
 
 // 404 & Error handlers
 app.use(notFound);
@@ -90,4 +110,5 @@ if (!process.env.VERCEL) {
   });
 }
 
+module.exports = app;
 export default app;
