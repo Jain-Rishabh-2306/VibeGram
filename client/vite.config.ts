@@ -1,8 +1,10 @@
 import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 
+const isGitHubPages = Boolean(process.env.GITHUB_ACTIONS);
+
 export default defineConfig({
-  base: '/VibeGram/',
+  base: isGitHubPages ? '/VibeGram/' : '/',
   plugins: [react()],
   server: {
     port: 5173,
