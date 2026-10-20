@@ -87,9 +87,7 @@ export function StoriesBar() {
       form.append('media', selectedFile);
       if (caption.trim()) form.append('caption', caption.trim());
 
-      await api.post('/stories', form, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      await api.post('/stories', form);
 
       toast('Story shared! 📸', 'success');
       setSelectedFile(null);

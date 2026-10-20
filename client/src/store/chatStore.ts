@@ -49,7 +49,12 @@ export const useChatStore = create<ChatState>((set, get) => ({
 
   connect: (userId) => {
     if (get().socket?.connected) return;
-    const socket = io('/', { withCredentials: true, transports: ['websocket', 'polling'] });
+    // Serverless platforms like Vercel Lambda do not support persistent WebSockets; REST fallback handles DMs
+    if (typeof window !== 'undefined' && window.location.hostname.includes('vercel.app')) {
+      return;
+    }
+    const socketUrl = import.meta.env.VITE_API_URL || '/';
+    const socket = io(socketUrl, { withCredentials: true, transports: ['websocket', 'polling'] });
 
     socket.on('connect', () => {
       set({ isConnected: true });
@@ -105,10 +110,35 @@ export const useChatStore = create<ChatState>((set, get) => ({
     set((s) => ({ messages: { ...s.messages, [conversationId]: data.messages } }));
   },
 
-  sendMessage: (conversationId, content, type = 'text') => {
+  sendMessage: async (conversationId, content, type = 'text') => {
     const { socket } = get();
-    if (socket) {
+    if (socket?.connected) {
       socket.emit('send_message', { conversationId, content, type });
+    }
+
+    try {
+      const { data } = await api.post(`/messages/conversations/${conversationId}/messages`, {
+        content,
+        message_type: type,
+      });
+      if (data.message) {
+        set((s) => {
+          const currentList = s.messages[conversationId] || [];
+          // Avoid duplicate if socket already delivered it
+          if (currentList.some((m) => m.id === data.message.id)) return s;
+          return {
+            messages: {
+              ...s.messages,
+              [conversationId]: [...currentList, data.message],
+            },
+            conversations: s.conversations.map((c) =>
+              c.id === conversationId ? { ...c, last_message: data.message } : c
+            ),
+          };
+        });
+      }
+    } catch (err) {
+      console.error('Failed to send message via REST:', err);
     }
   },
 

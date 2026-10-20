@@ -77,9 +77,7 @@ export default function CreatePostPage() {
         form.append('poll_options', JSON.stringify(pollOptions.filter((o) => o.trim().length > 0)));
       }
 
-      const { data } = await api.post('/posts', form, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
+      const { data } = await api.post('/posts', form);
       if (data.post && data.post.is_published) {
         addPost(data.post);
       }

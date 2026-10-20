@@ -44,9 +44,26 @@ export default function ProfilePage() {
   const [isLoading, setIsLoading] = useState(true);
   const [isFollowLoading, setIsFollowLoading] = useState(false);
   const [activeTab, setActiveTab] = useState<'posts' | 'bookmarks'>('posts');
+  const [isModeSwitching, setIsModeSwitching] = useState(false);
   const { startConversation } = useChatStore();
   const navigate = useNavigate();
   const { add: toast } = useToast();
+
+  const handleToggleMode = async () => {
+    if (!profile || isModeSwitching) return;
+    const nextMode = profile.profile_mode === 'personal' ? 'professional' : 'personal';
+    setIsModeSwitching(true);
+    try {
+      await api.patch('/users/me/profile-mode', { mode: nextMode });
+      setProfile((prev) => (prev ? { ...prev, profile_mode: nextMode } : prev));
+      useAuthStore.getState().updateUser({ profile_mode: nextMode });
+      toast(`Switched to ${nextMode} mode`, 'success');
+    } catch {
+      toast('Failed to switch mode', 'error');
+    } finally {
+      setIsModeSwitching(false);
+    }
+  };
 
   useEffect(() => {
     if (!username) return;
@@ -108,7 +125,20 @@ export default function ProfilePage() {
               {profile.is_private ? <Lock size={14} className="text-text-faint" /> : null}
             </div>
             {isOwn ? (
-              <Link to="/settings/profile" className="btn-secondary text-sm py-1.5 px-3">Edit Profile</Link>
+              <div className="flex items-center gap-2">
+                <Link to="/settings/profile" className="btn-secondary text-sm py-1.5 px-3">
+                  Edit Profile
+                </Link>
+                <button
+                  type="button"
+                  onClick={handleToggleMode}
+                  disabled={isModeSwitching}
+                  className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5 border-primary/40 text-primary hover:bg-primary/10 transition-colors"
+                  title="Click to switch personal/professional mode"
+                >
+                  {profile.profile_mode === 'professional' ? '💼 Professional Mode' : '🌐 Personal Mode'}
+                </button>
+              </div>
             ) : (
               <div className="flex gap-2">
                 <button
