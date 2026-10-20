@@ -31,8 +31,12 @@ api.interceptors.request.use(async (config) => {
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem('vibegram_token');
     if (token) {
-      config.headers = config.headers || {};
-      config.headers.Authorization = `Bearer ${token}`;
+      if (config.headers && typeof (config.headers as any).set === 'function') {
+        (config.headers as any).set('Authorization', `Bearer ${token}`);
+      } else {
+        config.headers = config.headers || {};
+        config.headers.Authorization = `Bearer ${token}`;
+      }
     }
   }
 
@@ -86,9 +90,6 @@ api.interceptors.response.use(
         processQueue(refreshErr, null);
         if (typeof window !== 'undefined') {
           localStorage.removeItem('vibegram_token');
-          if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
-            window.location.href = '/login';
-          }
         }
         return Promise.reject(refreshErr);
       } finally {

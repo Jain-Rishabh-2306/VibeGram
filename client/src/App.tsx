@@ -32,13 +32,15 @@ function PageLoader() {
 }
 
 export default function App() {
-  const { fetchMe, isAuthenticated } = useAuthStore();
+  const fetchMe = useAuthStore((s) => s.fetchMe);
+  const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   useEffect(() => {
-    if (isAuthenticated) {
+    const token = typeof window !== 'undefined' ? localStorage.getItem('vibegram_token') : null;
+    if (token && !isAuthenticated) {
       fetchMe();
     }
-  }, [isAuthenticated, fetchMe]);
+  }, []); // Run once on initial mount only
 
   return (
     <BrowserRouter basename={import.meta.env.BASE_URL}>
