@@ -18,6 +18,7 @@ export interface User {
 
 interface AuthState {
   user: User | null;
+  token: string | null;
   isAuthenticated: boolean;
   isLoading: boolean;
   login: (credential: string, password: string) => Promise<void>;
@@ -31,6 +32,7 @@ export const useAuthStore = create<AuthState>()(
   persist(
     (set, get) => ({
       user: null,
+      token: typeof window !== 'undefined' ? localStorage.getItem('vibegram_token') : null,
       isAuthenticated: false,
       isLoading: false,
 
@@ -38,7 +40,11 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true });
         try {
           const { data } = await api.post('/auth/login', { credential, password });
-          set({ user: data.user, isAuthenticated: true });
+          const token = data.accessToken || null;
+          if (token && typeof window !== 'undefined') {
+            localStorage.setItem('vibegram_token', token);
+          }
+          set({ user: data.user, token, isAuthenticated: true });
         } finally {
           set({ isLoading: false });
         }
@@ -48,7 +54,11 @@ export const useAuthStore = create<AuthState>()(
         set({ isLoading: true });
         try {
           const { data } = await api.post('/auth/register', formData);
-          set({ user: data.user, isAuthenticated: true });
+          const token = data.accessToken || null;
+          if (token && typeof window !== 'undefined') {
+            localStorage.setItem('vibegram_token', token);
+          }
+          set({ user: data.user, token, isAuthenticated: true });
         } finally {
           set({ isLoading: false });
         }
@@ -56,15 +66,25 @@ export const useAuthStore = create<AuthState>()(
 
       logout: async () => {
         try { await api.post('/auth/logout'); } catch { /* ignore */ }
-        set({ user: null, isAuthenticated: false });
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('vibegram_token');
+        }
+        set({ user: null, token: null, isAuthenticated: false });
       },
 
       fetchMe: async () => {
         try {
           const { data } = await api.get('/auth/me');
-          set({ user: data.user, isAuthenticated: true });
-        } catch {
-          set({ user: null, isAuthenticated: false });
+          if (data?.user) {
+            set({ user: data.user, isAuthenticated: true });
+          }
+        } catch (err: any) {
+          if (err?.response?.status === 401) {
+            if (typeof window !== 'undefined') {
+              localStorage.removeItem('vibegram_token');
+            }
+            set({ user: null, token: null, isAuthenticated: false });
+          }
         }
       },
 
@@ -75,7 +95,11 @@ export const useAuthStore = create<AuthState>()(
     }),
     {
       name: 'vibegram-auth',
-      partialize: (state) => ({ user: state.user, isAuthenticated: state.isAuthenticated }),
+      partialize: (state) => ({
+        user: state.user,
+        token: state.token,
+        isAuthenticated: state.isAuthenticated,
+      }),
     }
   )
 );

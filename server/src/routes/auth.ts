@@ -27,9 +27,18 @@ function generateTokens(userId: string, username: string) {
 }
 
 function setAuthCookies(res: Response, accessToken: string, refreshToken: string) {
-  const isProd = process.env.NODE_ENV === 'production';
-  res.cookie('accessToken', accessToken, { httpOnly: true, secure: isProd, sameSite: 'strict', maxAge: 15 * 60 * 1000 });
-  res.cookie('refreshToken', refreshToken, { httpOnly: true, secure: isProd, sameSite: 'strict', maxAge: 7 * 24 * 60 * 60 * 1000 });
+  res.cookie('accessToken', accessToken, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+    maxAge: 15 * 60 * 1000,
+  });
+  res.cookie('refreshToken', refreshToken, {
+    httpOnly: true,
+    secure: true,
+    sameSite: 'none',
+    maxAge: 7 * 24 * 60 * 60 * 1000,
+  });
 }
 
 router.post('/register', async (req, res, next) => {
@@ -75,7 +84,7 @@ router.post('/login', async (req, res, next) => {
 
 router.post('/refresh', async (req, res, next) => {
   try {
-    const token = req.cookies?.refreshToken;
+    const token = req.cookies?.refreshToken || req.body?.refreshToken;
     if (!token) { res.status(401).json({ success: false, message: 'No refresh token' }); return; }
     const decoded = jwt.verify(token, process.env.JWT_REFRESH_SECRET!) as { userId: string; username: string };
     const storedRes = await db.execute({ sql: 'SELECT * FROM refresh_tokens WHERE user_id=? AND expires_at > ?', args: [decoded.userId, Math.floor(Date.now() / 1000)] });

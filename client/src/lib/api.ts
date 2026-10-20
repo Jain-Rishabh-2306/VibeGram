@@ -26,8 +26,16 @@ function processQueue(error: any, token: string | null = null) {
   failedQueue = [];
 }
 
-// Intercept request if running on GitHub Pages (static environment without Node backend)
+// Intercept request: inject Bearer token and handle mock environment
 api.interceptors.request.use(async (config) => {
+  if (typeof window !== 'undefined') {
+    const token = localStorage.getItem('vibegram_token');
+    if (token) {
+      config.headers = config.headers || {};
+      config.headers.Authorization = `Bearer ${token}`;
+    }
+  }
+
   if (isGitHubPages) {
     // Return mock response directly via an adapter-like behavior
     const mockRes = await handleMockRequest(config);
@@ -76,7 +84,12 @@ api.interceptors.response.use(
         return api(original);
       } catch (refreshErr) {
         processQueue(refreshErr, null);
-        window.location.href = '/login';
+        if (typeof window !== 'undefined') {
+          localStorage.removeItem('vibegram_token');
+          if (!window.location.pathname.includes('/login') && !window.location.pathname.includes('/register')) {
+            window.location.href = '/login';
+          }
+        }
         return Promise.reject(refreshErr);
       } finally {
         isRefreshing = false;
