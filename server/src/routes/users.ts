@@ -24,24 +24,47 @@ router.get('/:username', authenticate, async (req: AuthRequest, res) => {
 
 router.put('/me/profile', authenticate, upload.single('avatar'), async (req: AuthRequest, res, next) => {
   try {
-    const schema = z.object({ full_name: z.string().min(1).max(60).optional(), bio: z.string().max(150).optional(), website: z.string().optional(), is_private: z.coerce.boolean().optional() });
+    const schema = z.object({
+      full_name: z.string().min(1).max(60).optional(),
+      bio: z.string().max(150).optional(),
+      website: z.string().optional(),
+      is_private: z.coerce.boolean().optional(),
+      profile_mode: z.enum(['personal', 'professional']).optional(),
+    });
     const data = schema.parse(req.body);
-    const updates: string[] = []; const values: any[] = [];
+    const updates: string[] = [];
+    const values: any[] = [];
+
     if (data.full_name !== undefined) { updates.push('full_name=?'); values.push(data.full_name); }
     if (data.bio !== undefined) { updates.push('bio=?'); values.push(data.bio); }
     if (data.website !== undefined) { updates.push('website=?'); values.push(data.website); }
     if (data.is_private !== undefined) { updates.push('is_private=?'); values.push(data.is_private ? 1 : 0); }
+    if (data.profile_mode !== undefined) { updates.push('profile_mode=?'); values.push(data.profile_mode); }
+
     if (req.file) {
       const avatarUrl = await uploadToStorage(req.file.path, req.file.filename, req.file.mimetype);
       updates.push('avatar_url=?');
       values.push(avatarUrl);
     }
-    if (updates.length === 0) { res.status(400).json({ success: false, message: 'Nothing to update' }); return; }
-    updates.push('updated_at=?'); values.push(Math.floor(Date.now() / 1000)); values.push(req.userId!);
+
+    if (updates.length === 0) {
+      // Nothing changed, return existing user
+      const userRes = await db.execute({ sql: 'SELECT id,username,email,full_name,bio,avatar_url,website,is_private,is_verified,profile_mode FROM users WHERE id=?', args: [req.userId!] });
+      res.json({ success: true, user: userRes.rows[0] });
+      return;
+    }
+
+    updates.push('updated_at=?');
+    values.push(Math.floor(Date.now() / 1000));
+    values.push(req.userId!);
+
     await db.execute({ sql: `UPDATE users SET ${updates.join(',')} WHERE id=?`, args: values });
     const userRes = await db.execute({ sql: 'SELECT id,username,email,full_name,bio,avatar_url,website,is_private,is_verified,profile_mode FROM users WHERE id=?', args: [req.userId!] });
     res.json({ success: true, user: userRes.rows[0] });
-  } catch (err) { if (err instanceof z.ZodError) res.status(400).json({ success: false, message: err.errors[0].message }); else next(err); }
+  } catch (err) {
+    if (err instanceof z.ZodError) res.status(400).json({ success: false, message: err.errors[0].message });
+    else next(err);
+  }
 });
 
 router.patch('/me/profile-mode', authenticate, async (req: AuthRequest, res) => {

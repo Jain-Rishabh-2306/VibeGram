@@ -1,6 +1,7 @@
 import { Router } from 'express';
 import { v4 as uuidv4 } from 'uuid';
 import { db } from '../config/database';
+import { uploadToStorage } from '../config/storage';
 import { authenticate, AuthRequest } from '../middleware/auth';
 import { upload } from '../middleware/upload';
 
@@ -11,7 +12,8 @@ router.post('/', authenticate, upload.single('media'), async (req: AuthRequest, 
   const { caption } = req.body;
   const storyId = uuidv4();
   const expiresAt = Math.floor(Date.now() / 1000) + 24 * 3600;
-  await db.execute({ sql: 'INSERT INTO stories (id,user_id,media_url,caption,expires_at) VALUES (?,?,?,?,?)', args: [storyId, req.userId!, `/uploads/${req.file.filename}`, caption || '', expiresAt] });
+  const mediaUrl = await uploadToStorage(req.file.path, req.file.filename, req.file.mimetype);
+  await db.execute({ sql: 'INSERT INTO stories (id,user_id,media_url,caption,expires_at) VALUES (?,?,?,?,?)', args: [storyId, req.userId!, mediaUrl, caption || '', expiresAt] });
   const story = await db.execute({ sql: 'SELECT * FROM stories WHERE id=?', args: [storyId] });
   res.status(201).json({ success: true, story: story.rows[0] });
 });
@@ -22,8 +24,13 @@ router.get('/feed', authenticate, async (req: AuthRequest, res) => {
     FROM users u JOIN stories s ON s.user_id=u.id AND s.expires_at>?
     WHERE u.id IN (SELECT following_id FROM follows WHERE follower_id=? AND status='accepted')
     GROUP BY u.id ORDER BY latest_story DESC`, args: [now, req.userId!] });
-  const myC = await db.execute({ sql: 'SELECT COUNT(*) as count FROM stories WHERE user_id=? AND expires_at>?', args: [req.userId!, now] });
-  res.json({ success: true, storyUsers: r.rows, myStoryCount: (myC.rows[0] as any).count });
+  const myStories = await db.execute({ sql: 'SELECT * FROM stories WHERE user_id=? AND expires_at>? ORDER BY created_at ASC', args: [req.userId!, now] });
+  res.json({
+    success: true,
+    storyUsers: r.rows,
+    myStories: myStories.rows,
+    myStoryCount: myStories.rows.length
+  });
 });
 
 router.get('/user/:userId', authenticate, async (req: AuthRequest, res) => {

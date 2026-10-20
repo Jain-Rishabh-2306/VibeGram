@@ -21,10 +21,11 @@ export default function EditProfilePage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const updateUser = useAuthStore((s) => s.updateUser);
-  const { add: toast } = useToast();
+  const { add: toast, clear: clearToasts } = useToast();
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
   const [isSaving, setIsSaving] = useState(false);
+  const isSubmittingRef = useRef(false);
   const [profileMode, setProfileMode] = useState<'personal' | 'professional'>(user?.profile_mode || 'personal');
   const fileRef = useRef<HTMLInputElement>(null);
 
@@ -48,31 +49,29 @@ export default function EditProfilePage() {
   };
 
   const onSubmit = async (data: FormData) => {
+    if (isSubmittingRef.current || isSaving) return;
+    isSubmittingRef.current = true;
     setIsSaving(true);
+    clearToasts();
+
     try {
       const form = new FormData();
       Object.entries(data).forEach(([k, v]) => {
         if (v !== undefined && v !== null) form.append(k, String(v));
       });
+      form.append('profile_mode', profileMode);
       if (avatarFile) form.append('avatar', avatarFile);
 
-      const { data: res } = await api.put('/users/me/profile', form, {
-        headers: { 'Content-Type': 'multipart/form-data' },
-      });
-
-      // Update profile mode if changed
-      if (profileMode !== user?.profile_mode) {
-        await api.patch('/users/me/profile-mode', { mode: profileMode });
-        updateUser({ profile_mode: profileMode });
-      }
+      const { data: res } = await api.put('/users/me/profile', form);
 
       updateUser(res.user);
-      toast('Profile updated!', 'success');
+      toast('Profile updated successfully!', 'success');
       navigate(`/profile/${res.user.username}`);
     } catch (err: any) {
       toast(err?.response?.data?.message || 'Failed to update profile', 'error');
     } finally {
       setIsSaving(false);
+      isSubmittingRef.current = false;
     }
   };
 

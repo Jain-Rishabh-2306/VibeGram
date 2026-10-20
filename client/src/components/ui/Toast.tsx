@@ -3,7 +3,12 @@ import { motion, AnimatePresence } from 'framer-motion';
 import { CheckCircle, XCircle, AlertCircle, Info, X } from 'lucide-react';
 
 interface Toast { id: string; message: string; type: 'success' | 'error' | 'warning' | 'info'; }
-interface ToastStore { toasts: Toast[]; add: (message: string, type?: Toast['type']) => void; remove: (id: string) => void; }
+interface ToastStore {
+  toasts: Toast[];
+  add: (message: string, type?: Toast['type']) => void;
+  remove: (id: string) => void;
+  clear: () => void;
+}
 
 export const useToast = create<ToastStore>((set) => ({
   toasts: [],
@@ -13,6 +18,7 @@ export const useToast = create<ToastStore>((set) => ({
     setTimeout(() => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })), 4000);
   },
   remove: (id) => set((s) => ({ toasts: s.toasts.filter((t) => t.id !== id) })),
+  clear: () => set({ toasts: [] }),
 }));
 
 const ICONS = { success: CheckCircle, error: XCircle, warning: AlertCircle, info: Info };
