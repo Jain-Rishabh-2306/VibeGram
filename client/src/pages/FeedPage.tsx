@@ -1,8 +1,9 @@
 import { useEffect, useState } from 'react';
 import { motion } from 'framer-motion';
-import { RefreshCw } from 'lucide-react';
+import { RefreshCw, Sun, Moon, Sparkles } from 'lucide-react';
 import { useFeedStore } from '../store/feedStore';
 import { useNotifStore } from '../store/notifStore';
+import { useThemeStore } from '../store/themeStore';
 import { PostCard } from '../components/post/PostCard';
 import { CommentsModal } from '../components/post/CommentsModal';
 import { StoriesBar } from '../components/stories/StoriesBar';
@@ -13,6 +14,7 @@ import type { Post } from '../store/feedStore';
 export default function FeedPage() {
   const { posts, isLoading, isRefreshing, hasMore, fetchFeed } = useFeedStore();
   const fetchNotifs = useNotifStore(s => s.fetch);
+  const { theme, toggleTheme } = useThemeStore();
   const [commentPost, setCommentPost] = useState<Post | null>(null);
 
   useEffect(() => {
@@ -27,18 +29,31 @@ export default function FeedPage() {
     }
   };
 
+  const ThemeIcon = theme === 'light' ? Sun : theme === 'midnight' ? Sparkles : Moon;
+
   return (
     <div className="max-w-xl mx-auto px-3 py-4" onScroll={handleScroll}>
       {/* Header */}
       <div className="flex items-center justify-between mb-5 px-1">
         <h1 className="font-display text-2xl font-bold gradient-text">VibeGram</h1>
-        <button
-          onClick={() => fetchFeed(true)}
-          disabled={isRefreshing}
-          className="p-2 rounded-xl hover:bg-surface-hover text-text-muted hover:text-text-primary transition-all"
-        >
-          <RefreshCw size={18} className={isRefreshing ? 'animate-spin' : ''} />
-        </button>
+        <div className="flex items-center gap-1">
+          <button
+            onClick={toggleTheme}
+            type="button"
+            className="p-2 rounded-xl hover:bg-surface-hover text-text-muted hover:text-secondary transition-all"
+            title={`Current theme: ${theme}. Click to switch theme`}
+          >
+            <ThemeIcon size={19} />
+          </button>
+          <button
+            onClick={() => fetchFeed(true)}
+            disabled={isRefreshing}
+            className="p-2 rounded-xl hover:bg-surface-hover text-text-muted hover:text-text-primary transition-all"
+            title="Refresh feed"
+          >
+            <RefreshCw size={18} className={isRefreshing ? 'animate-spin' : ''} />
+          </button>
+        </div>
       </div>
 
       {/* Stories */}

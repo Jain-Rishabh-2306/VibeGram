@@ -1,10 +1,11 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Camera, ArrowLeft, Loader2, Lock, Globe, Briefcase } from 'lucide-react';
+import { Camera, ArrowLeft, Loader2, Lock, Globe, Briefcase, LogOut, Sun, Moon, Sparkles, Palette } from 'lucide-react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
 import { useAuthStore } from '../store/authStore';
+import { useThemeStore, Theme } from '../store/themeStore';
 import { Avatar } from '../components/ui/Avatar';
 import { useToast } from '../components/ui/Toast';
 import api from '../lib/api';
@@ -21,6 +22,8 @@ export default function EditProfilePage() {
   const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
   const updateUser = useAuthStore((s) => s.updateUser);
+  const logout = useAuthStore((s) => s.logout);
+  const { theme, setTheme } = useThemeStore();
   const { add: toast, clear: clearToasts } = useToast();
   const [avatarPreview, setAvatarPreview] = useState<string | null>(null);
   const [avatarFile, setAvatarFile] = useState<File | null>(null);
@@ -28,6 +31,16 @@ export default function EditProfilePage() {
   const isSubmittingRef = useRef(false);
   const [profileMode, setProfileMode] = useState<'personal' | 'professional'>(user?.profile_mode || 'personal');
   const fileRef = useRef<HTMLInputElement>(null);
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast('Logged out successfully', 'info');
+      navigate('/login');
+    } catch {
+      toast('Failed to log out', 'error');
+    }
+  };
 
   const { register, handleSubmit, formState: { errors } } = useForm<FormData>({
     resolver: zodResolver(schema),
@@ -165,10 +178,51 @@ export default function EditProfilePage() {
           </div>
         </div>
 
+        {/* Theme & Appearance */}
+        <div className="card p-5">
+          <div className="flex items-center gap-2 mb-3">
+            <Palette size={16} className="text-secondary" />
+            <h3 className="text-sm font-semibold text-text-muted uppercase tracking-wide">Theme & Appearance</h3>
+          </div>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { id: 'dark' as Theme, label: 'Cyber Dark', icon: Moon, desc: 'Neon Dark' },
+              { id: 'light' as Theme, label: 'Clean Light', icon: Sun, desc: 'Crisp White' },
+              { id: 'midnight' as Theme, label: 'Midnight', icon: Sparkles, desc: 'OLED Pure Black' },
+            ].map(({ id, label, icon: Icon, desc }) => (
+              <button
+                key={id}
+                type="button"
+                onClick={() => setTheme(id)}
+                className={`flex flex-col items-center justify-center p-3 rounded-xl border text-center transition-all ${
+                  theme === id
+                    ? 'border-primary bg-primary/10 text-primary shadow-sm'
+                    : 'border-border hover:bg-surface-hover text-text-muted hover:text-text-primary'
+                }`}
+              >
+                <Icon size={20} className="mb-1.5" />
+                <span className="text-xs font-semibold">{label}</span>
+                <span className="text-[10px] text-text-faint">{desc}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+
         {/* Save button */}
         <button type="submit" disabled={isSaving} className="btn-primary w-full flex items-center justify-center gap-2">
           {isSaving ? <><Loader2 size={18} className="animate-spin" /> Saving...</> : 'Save Changes'}
         </button>
+
+        {/* Account Actions / Logout */}
+        <div className="pt-2">
+          <button
+            type="button"
+            onClick={handleLogout}
+            className="w-full flex items-center justify-center gap-2 py-3 px-4 rounded-xl border border-accent/30 text-accent hover:bg-accent/10 transition-colors font-semibold text-sm"
+          >
+            <LogOut size={16} /> Log Out of VibeGram
+          </button>
+        </div>
       </form>
     </div>
   );

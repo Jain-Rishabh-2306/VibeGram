@@ -1,7 +1,23 @@
-import { Link, useLocation } from 'react-router-dom';
-import { Home, Search, PlusSquare, Heart, MessageCircle, User, Compass, BookOpen, Calendar, Image } from 'lucide-react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
+import {
+  Home,
+  Search,
+  PlusSquare,
+  Heart,
+  MessageCircle,
+  User,
+  Compass,
+  Calendar,
+  Image,
+  LogOut,
+  Sun,
+  Moon,
+  Sparkles,
+} from 'lucide-react';
 import { useAuthStore } from '../../store/authStore';
 import { useNotifStore } from '../../store/notifStore';
+import { useThemeStore } from '../../store/themeStore';
+import { useToast } from '../ui/Toast';
 
 const NAV_ITEMS = [
   { to: '/', icon: Home, label: 'Home' },
@@ -59,8 +75,37 @@ export function MobileNav() {
 
 export function Sidebar() {
   const { pathname } = useLocation();
+  const navigate = useNavigate();
   const user = useAuthStore((s) => s.user);
+  const logout = useAuthStore((s) => s.logout);
   const unread = useNotifStore((s) => s.unreadCount);
+  const { theme, toggleTheme } = useThemeStore();
+  const { add: toast } = useToast();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast('Logged out successfully', 'info');
+      navigate('/login');
+    } catch {
+      toast('Failed to log out', 'error');
+    }
+  };
+
+  const getThemeInfo = () => {
+    switch (theme) {
+      case 'light':
+        return { icon: Sun, label: 'Clean Light' };
+      case 'midnight':
+        return { icon: Sparkles, label: 'Midnight OLED' };
+      case 'dark':
+      default:
+        return { icon: Moon, label: 'Cyber Dark' };
+    }
+  };
+
+  const currentThemeInfo = getThemeInfo();
+  const ThemeIcon = currentThemeInfo.icon;
 
   const SIDEBAR_ITEMS = [
     { to: '/', icon: Home, label: 'Home' },
@@ -81,7 +126,7 @@ export function Sidebar() {
       </div>
 
       {/* Nav items */}
-      <nav className="flex flex-col gap-1 flex-1">
+      <nav className="flex flex-col gap-1 flex-1 overflow-y-auto pr-1">
         {SIDEBAR_ITEMS.map(({ to, icon: Icon, label, badge }) => {
           const active = pathname === to || (to !== '/' && pathname.startsWith(to));
           return (
@@ -106,9 +151,38 @@ export function Sidebar() {
         })}
       </nav>
 
+      {/* Theme Toggle & Logout */}
+      <div className="flex flex-col gap-1 pt-3 pb-2 border-t border-border">
+        <button
+          onClick={toggleTheme}
+          type="button"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-text-muted hover:bg-surface-hover hover:text-text-primary transition-all text-left"
+          title="Click to cycle theme (Cyber Dark / Clean Light / Midnight OLED)"
+        >
+          <ThemeIcon size={20} className="text-secondary" />
+          <div className="flex-1 min-w-0">
+            <span className="text-[10px] text-text-faint uppercase font-bold tracking-wider block">Theme</span>
+            <span className="text-sm font-medium">{currentThemeInfo.label}</span>
+          </div>
+        </button>
+
+        <button
+          onClick={handleLogout}
+          type="button"
+          className="flex items-center gap-3 px-3 py-2.5 rounded-xl text-accent/80 hover:bg-accent/10 hover:text-accent transition-all text-left"
+          title="Log out of VibeGram"
+        >
+          <LogOut size={20} />
+          <span className="text-sm font-semibold">Log Out</span>
+        </button>
+      </div>
+
       {/* User chip */}
       {user && (
-        <div className="flex items-center gap-3 p-3 rounded-xl hover:bg-surface-hover transition-all cursor-pointer mt-4">
+        <Link
+          to={`/profile/${user.username}`}
+          className="flex items-center gap-3 p-3 rounded-xl hover:bg-surface-hover transition-all cursor-pointer mt-1"
+        >
           {user.avatar_url ? (
             <img src={user.avatar_url} alt={user.username} className="w-9 h-9 avatar" />
           ) : (
@@ -120,7 +194,7 @@ export function Sidebar() {
             <p className="text-sm font-semibold truncate">{user.full_name}</p>
             <p className="text-xs text-text-muted truncate">@{user.username}</p>
           </div>
-        </div>
+        </Link>
       )}
     </aside>
   );

@@ -4,10 +4,10 @@ export default {
   theme: {
     extend: {
       colors: {
-        bg: '#0F172A',
-        surface: '#1E293B',
-        'surface-hover': '#273449',
-        'surface-light': '#334155',
+        bg: 'var(--color-bg)',
+        surface: 'var(--color-surface)',
+        'surface-hover': 'var(--color-surface-hover)',
+        'surface-light': 'var(--color-surface-light)',
         primary: '#A855F7',
         'primary-dark': '#9333EA',
         'primary-light': '#C084FC',
@@ -15,11 +15,11 @@ export default {
         'secondary-dark': '#0891B2',
         accent: '#F43F5E',
         'accent-dark': '#E11D48',
-        'text-primary': '#F1F5F9',
-        'text-muted': '#94A3B8',
-        'text-faint': '#64748B',
-        border: '#1E293B',
-        'border-light': '#334155',
+        'text-primary': 'var(--color-text-primary)',
+        'text-muted': 'var(--color-text-muted)',
+        'text-faint': 'var(--color-text-faint)',
+        border: 'var(--color-border)',
+        'border-light': 'var(--color-border-light)',
       },
       fontFamily: {
         sans: ['Inter', 'system-ui', 'sans-serif'],

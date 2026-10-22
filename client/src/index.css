@@ -2,6 +2,45 @@
 @tailwind components;
 @tailwind utilities;
 
+:root {
+  /* Default: Cyber Dark Theme */
+  --color-bg: #0F172A;
+  --color-surface: #1E293B;
+  --color-surface-hover: #273449;
+  --color-surface-light: #334155;
+  --color-text-primary: #F1F5F9;
+  --color-text-muted: #94A3B8;
+  --color-text-faint: #64748B;
+  --color-border: #1E293B;
+  --color-border-light: #334155;
+}
+
+[data-theme="light"] {
+  /* Clean Day / Light Theme */
+  --color-bg: #F8FAFC;
+  --color-surface: #FFFFFF;
+  --color-surface-hover: #F1F5F9;
+  --color-surface-light: #E2E8F0;
+  --color-text-primary: #0F172A;
+  --color-text-muted: #64748B;
+  --color-text-faint: #94A3B8;
+  --color-border: #E2E8F0;
+  --color-border-light: #CBD5E1;
+}
+
+[data-theme="midnight"] {
+  /* Midnight / OLED Pure Black Theme */
+  --color-bg: #000000;
+  --color-surface: #0B0E14;
+  --color-surface-hover: #151A24;
+  --color-surface-light: #202736;
+  --color-text-primary: #FFFFFF;
+  --color-text-muted: #A0AEC0;
+  --color-text-faint: #718096;
+  --color-border: #151A24;
+  --color-border-light: #202736;
+}
+
 @layer base {
   * {
     box-sizing: border-box;

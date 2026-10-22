@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
-import { Grid, Bookmark, Settings, UserPlus, UserMinus, MessageCircle, Lock, BadgeCheck } from 'lucide-react';
+import { Grid, Bookmark, Settings, UserPlus, UserMinus, MessageCircle, Lock, BadgeCheck, LogOut } from 'lucide-react';
 import { motion } from 'framer-motion';
 import { useAuthStore } from '../store/authStore';
 import { Avatar } from '../components/ui/Avatar';
@@ -39,6 +39,7 @@ interface ProfilePost {
 export default function ProfilePage() {
   const { username } = useParams<{ username: string }>();
   const currentUser = useAuthStore(s => s.user);
+  const logout = useAuthStore(s => s.logout);
   const [profile, setProfile] = useState<ProfileUser | null>(null);
   const [posts, setPosts] = useState<ProfilePost[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -48,6 +49,16 @@ export default function ProfilePage() {
   const { startConversation } = useChatStore();
   const navigate = useNavigate();
   const { add: toast } = useToast();
+
+  const handleLogout = async () => {
+    try {
+      await logout();
+      toast('Logged out successfully', 'info');
+      navigate('/login');
+    } catch {
+      toast('Failed to log out', 'error');
+    }
+  };
 
   const handleToggleMode = async () => {
     if (!profile || isModeSwitching) return;
@@ -125,7 +136,7 @@ export default function ProfilePage() {
               {profile.is_private ? <Lock size={14} className="text-text-faint" /> : null}
             </div>
             {isOwn ? (
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <Link to="/settings/profile" className="btn-secondary text-sm py-1.5 px-3">
                   Edit Profile
                 </Link>
@@ -137,6 +148,14 @@ export default function ProfilePage() {
                   title="Click to switch personal/professional mode"
                 >
                   {profile.profile_mode === 'professional' ? '💼 Professional Mode' : '🌐 Personal Mode'}
+                </button>
+                <button
+                  type="button"
+                  onClick={handleLogout}
+                  className="btn-secondary text-xs py-1.5 px-3 flex items-center gap-1.5 border-accent/40 text-accent hover:bg-accent/10 transition-colors"
+                  title="Log out of VibeGram"
+                >
+                  <LogOut size={14} /> Log Out
                 </button>
               </div>
             ) : (
