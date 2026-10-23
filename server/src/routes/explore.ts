@@ -6,22 +6,32 @@ const router = Router();
 
 router.get('/search', authenticate, async (req: AuthRequest, res) => {
   const { q, type = 'all' } = req.query as Record<string, string>;
-  if (!q?.trim()) { res.json({ success: true, users: [], posts: [], hashtags: [] }); return; }
+  if (!q?.trim()) { res.json({ success: true, users: [], posts: [], hashtags: [], results: [] }); return; }
   const query = `%${q.trim()}%`;
   const results: Record<string, any[]> = { users: [], posts: [], hashtags: [] };
   if (type === 'all' || type === 'users') {
-    const r = await db.execute({ sql: `SELECT u.id,u.username,u.full_name,u.avatar_url,u.bio,u.is_verified,(SELECT COUNT(*) FROM follows WHERE following_id=u.id AND status='accepted') as followers_count,(SELECT status FROM follows WHERE follower_id=? AND following_id=u.id) as follow_status FROM users u WHERE (u.username LIKE ? OR u.full_name LIKE ?) AND u.id!=? ORDER BY followers_count DESC LIMIT 20`, args: [req.userId!, query, query, req.userId!] });
-    results.users = r.rows as any[];
+    const r = await db.execute({
+      sql: `SELECT u.id,u.username,u.full_name,u.avatar_url,u.bio,u.is_verified,(SELECT COUNT(*) FROM follows WHERE following_id=u.id AND status='accepted') as followers_count,(SELECT status FROM follows WHERE follower_id=? AND following_id=u.id) as follow_status FROM users u WHERE (LOWER(u.username) LIKE LOWER(?) OR LOWER(u.full_name) LIKE LOWER(?)) ORDER BY followers_count DESC LIMIT 20`,
+      args: [req.userId!, query, query]
+    });
+    results.users = r.rows.map((row: any) => ({ ...row, type: 'user' }));
   }
   if (type === 'all' || type === 'posts') {
-    const r = await db.execute({ sql: `SELECT p.id,p.caption,(SELECT media_url FROM post_media WHERE post_id=p.id ORDER BY order_index LIMIT 1) as thumbnail,(SELECT COUNT(*) FROM likes WHERE post_id=p.id) as likes_count,u.username,u.avatar_url FROM posts p JOIN users u ON u.id=p.user_id WHERE p.caption LIKE ? AND p.is_published=1 ORDER BY likes_count DESC LIMIT 20`, args: [query] });
-    results.posts = r.rows as any[];
+    const r = await db.execute({
+      sql: `SELECT p.id,p.caption,(SELECT media_url FROM post_media WHERE post_id=p.id ORDER BY order_index LIMIT 1) as thumbnail,(SELECT COUNT(*) FROM likes WHERE post_id=p.id) as likes_count,u.username,u.avatar_url FROM posts p JOIN users u ON u.id=p.user_id WHERE LOWER(p.caption) LIKE LOWER(?) AND p.is_published=1 ORDER BY likes_count DESC LIMIT 20`,
+      args: [query]
+    });
+    results.posts = r.rows.map((row: any) => ({ ...row, type: 'post' }));
   }
   if (type === 'all' || type === 'hashtags') {
-    const r = await db.execute({ sql: `SELECT h.tag,COUNT(ph.post_id) as post_count FROM hashtags h LEFT JOIN post_hashtags ph ON ph.hashtag_id=h.id WHERE h.tag LIKE ? GROUP BY h.id ORDER BY post_count DESC LIMIT 10`, args: [query] });
-    results.hashtags = r.rows as any[];
+    const r = await db.execute({
+      sql: `SELECT h.tag,COUNT(ph.post_id) as post_count FROM hashtags h LEFT JOIN post_hashtags ph ON ph.hashtag_id=h.id WHERE LOWER(h.tag) LIKE LOWER(?) GROUP BY h.id ORDER BY post_count DESC LIMIT 10`,
+      args: [query]
+    });
+    results.hashtags = r.rows.map((row: any) => ({ ...row, type: 'hashtag' }));
   }
-  res.json({ success: true, ...results });
+  const combined = [...results.users, ...results.hashtags];
+  res.json({ success: true, ...results, results: combined });
 });
 
 router.get('/posts', authenticate, async (req: AuthRequest, res) => {

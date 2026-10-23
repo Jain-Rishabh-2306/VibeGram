@@ -30,11 +30,18 @@ export default function ExplorePage() {
       setIsSearching(true);
       try {
         const { data } = await api.get(`/explore/search?q=${encodeURIComponent(query)}`);
-        setSearchResults(data.results || []);
+        const users = (data.users || []).map((u: any) => ({ ...u, type: 'user' }));
+        const tags = (data.hashtags || []).map((h: any) => ({ ...h, type: 'hashtag' }));
+        const combined = (data.results && data.results.length > 0)
+          ? data.results
+          : [...users, ...tags];
+        setSearchResults(combined);
+      } catch {
+        setSearchResults([]);
       } finally {
         setIsSearching(false);
       }
-    }, 400);
+    }, 300);
     return () => clearTimeout(timer);
   }, [query]);
 
@@ -55,30 +62,57 @@ export default function ExplorePage() {
       </div>
 
       {/* Search results */}
-      {query.trim() && searchResults.length > 0 && (
-        <div className="card mb-6 divide-y divide-border">
-          {searchResults.map((r: any) => (
-            <Link key={r.id} to={r.type === 'user' ? `/profile/${r.username}` : `/explore?tag=${r.tag}`}
-              className="flex items-center gap-3 p-3 hover:bg-surface-hover transition-colors">
-              {r.type === 'user' ? (
-                <>
-                  {r.avatar_url ? <img src={r.avatar_url} className="w-10 h-10 rounded-full object-cover" alt={r.username} /> : <div className="w-10 h-10 rounded-full bg-gradient-brand flex items-center justify-center text-white font-bold">{r.username[0].toUpperCase()}</div>}
-                  <div>
-                    <p className="font-semibold text-sm">{r.username}</p>
-                    <p className="text-xs text-text-muted">{r.full_name}</p>
-                  </div>
-                </>
-              ) : (
-                <>
-                  <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center"><Hash size={18} className="text-primary" /></div>
-                  <div>
-                    <p className="font-semibold text-sm">#{r.tag}</p>
-                    <p className="text-xs text-text-muted">{r.post_count} posts</p>
-                  </div>
-                </>
-              )}
-            </Link>
-          ))}
+      {query.trim() && (
+        <div className="card mb-6 overflow-hidden">
+          {searchResults.length > 0 ? (
+            <div className="divide-y divide-border">
+              {searchResults.map((r: any) => (
+                <Link
+                  key={r.type === 'user' ? `u-${r.id}` : `h-${r.tag}`}
+                  to={r.type === 'user' ? `/profile/${r.username}` : `/explore?tag=${r.tag}`}
+                  className="flex items-center gap-3 p-3 hover:bg-surface-hover transition-colors"
+                >
+                  {r.type === 'user' ? (
+                    <>
+                      {r.avatar_url ? (
+                        <img src={r.avatar_url} className="w-10 h-10 rounded-full object-cover" alt={r.username} />
+                      ) : (
+                        <div className="w-10 h-10 rounded-full bg-gradient-brand flex items-center justify-center text-white font-bold text-sm">
+                          {r.username?.[0]?.toUpperCase()}
+                        </div>
+                      )}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-1.5">
+                          <p className="font-semibold text-sm truncate">{r.username}</p>
+                          {r.is_verified ? <span className="text-secondary text-xs font-bold">✓</span> : null}
+                        </div>
+                        <p className="text-xs text-text-muted truncate">{r.full_name}</p>
+                      </div>
+                      {r.followers_count !== undefined && (
+                        <span className="text-[11px] text-text-faint">
+                          {r.followers_count} {r.followers_count === 1 ? 'follower' : 'followers'}
+                        </span>
+                      )}
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-10 h-10 rounded-full bg-primary/10 flex items-center justify-center">
+                        <Hash size={18} className="text-primary" />
+                      </div>
+                      <div>
+                        <p className="font-semibold text-sm">#{r.tag}</p>
+                        <p className="text-xs text-text-muted">{r.post_count} posts</p>
+                      </div>
+                    </>
+                  )}
+                </Link>
+              ))}
+            </div>
+          ) : !isSearching ? (
+            <div className="p-6 text-center text-text-muted text-sm">
+              No accounts or hashtags found for "{query}"
+            </div>
+          ) : null}
         </div>
       )}
 
