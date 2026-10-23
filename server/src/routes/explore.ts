@@ -6,13 +6,15 @@ const router = Router();
 
 router.get('/search', authenticate, async (req: AuthRequest, res) => {
   const { q, type = 'all' } = req.query as Record<string, string>;
-  if (!q?.trim()) { res.json({ success: true, users: [], posts: [], hashtags: [], results: [] }); return; }
-  const query = `%${q.trim()}%`;
+  const rawQ = q?.trim() || '';
+  if (!rawQ) { res.json({ success: true, users: [], posts: [], hashtags: [], results: [] }); return; }
+  const cleanQ = rawQ.replace(/^@+/, '').trim();
+  const query = `%${cleanQ || rawQ}%`;
   const results: Record<string, any[]> = { users: [], posts: [], hashtags: [] };
   if (type === 'all' || type === 'users') {
     const r = await db.execute({
-      sql: `SELECT u.id,u.username,u.full_name,u.avatar_url,u.bio,u.is_verified,(SELECT COUNT(*) FROM follows WHERE following_id=u.id AND status='accepted') as followers_count,(SELECT status FROM follows WHERE follower_id=? AND following_id=u.id) as follow_status FROM users u WHERE (LOWER(u.username) LIKE LOWER(?) OR LOWER(u.full_name) LIKE LOWER(?)) ORDER BY followers_count DESC LIMIT 20`,
-      args: [req.userId!, query, query]
+      sql: `SELECT u.id,u.username,u.full_name,u.avatar_url,u.bio,u.is_verified,(SELECT COUNT(*) FROM follows WHERE following_id=u.id AND status='accepted') as followers_count,(SELECT status FROM follows WHERE follower_id=? AND following_id=u.id) as follow_status FROM users u WHERE (LOWER(u.username) LIKE LOWER(?) OR LOWER(u.full_name) LIKE LOWER(?) OR LOWER(u.email) LIKE LOWER(?)) ORDER BY followers_count DESC LIMIT 20`,
+      args: [req.userId!, query, query, query]
     });
     results.users = r.rows.map((row: any) => ({ ...row, type: 'user' }));
   }

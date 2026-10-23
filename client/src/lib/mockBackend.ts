@@ -393,7 +393,38 @@ export async function handleMockRequest(config: AxiosRequestConfig): Promise<Axi
     });
   }
 
-  // 11. Explore
+  // 11. Explore Search
+  if (url.includes('/explore/search')) {
+    const qMatch = url.match(/[?&]q=([^&]+)/);
+    const qVal = qMatch ? decodeURIComponent(qMatch[1]).replace(/^@+/, '').toLowerCase() : '';
+    const storedUsers = getStored<any[]>(USERS_KEY, []);
+    const allUsers = [
+      ...storedUsers,
+      ...SEED_POSTS.map((p) => ({
+        id: p.user_id,
+        username: p.username,
+        full_name: p.full_name,
+        avatar_url: p.avatar_url,
+        is_verified: p.is_verified,
+        followers_count: 12,
+        type: 'user',
+      })),
+    ];
+    const matchedUsers = allUsers.filter(
+      (u) =>
+        (u.username && u.username.toLowerCase().includes(qVal)) ||
+        (u.full_name && u.full_name.toLowerCase().includes(qVal))
+    );
+    return mockResponse({
+      success: true,
+      users: matchedUsers,
+      posts: [],
+      hashtags: [],
+      results: matchedUsers,
+    });
+  }
+
+  // 11b. Explore Main Feed
   if (url.includes('/explore')) {
     return mockResponse({
       success: true,

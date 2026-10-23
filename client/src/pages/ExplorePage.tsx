@@ -25,11 +25,13 @@ export default function ExplorePage() {
   }, []);
 
   useEffect(() => {
-    if (!query.trim()) { setSearchResults([]); return; }
+    const raw = query.trim();
+    if (!raw) { setSearchResults([]); return; }
+    const clean = raw.replace(/^@+/, '');
     const timer = setTimeout(async () => {
       setIsSearching(true);
       try {
-        const { data } = await api.get(`/explore/search?q=${encodeURIComponent(query)}`);
+        const { data } = await api.get(`/explore/search?q=${encodeURIComponent(clean || raw)}`);
         const users = (data.users || []).map((u: any) => ({ ...u, type: 'user' }));
         const tags = (data.hashtags || []).map((h: any) => ({ ...h, type: 'hashtag' }));
         const combined = (data.results && data.results.length > 0)
@@ -41,7 +43,7 @@ export default function ExplorePage() {
       } finally {
         setIsSearching(false);
       }
-    }, 300);
+    }, 250);
     return () => clearTimeout(timer);
   }, [query]);
 
