@@ -36,6 +36,20 @@ export default function App() {
   const isAuthenticated = useAuthStore((s) => s.isAuthenticated);
 
   useEffect(() => {
+    if (typeof window !== 'undefined') {
+      [
+        'vibegram_mock_users',
+        'vibegram_mock_posts',
+        'vibegram_mock_current_user',
+        'vibegram_mock_events',
+        'vibegram_mock_albums',
+        'vibegram_mock_notifs',
+        'vibegram_mock_stories',
+      ].forEach((k) => {
+        try { localStorage.removeItem(k); } catch {}
+      });
+    }
+
     const token = typeof window !== 'undefined' ? localStorage.getItem('vibegram_token') : null;
     if (token && !isAuthenticated) {
       fetchMe();

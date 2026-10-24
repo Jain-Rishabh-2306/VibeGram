@@ -1,17 +1,15 @@
 import axios from 'axios';
-import { handleMockRequest } from './mockBackend';
 
-const isGitHubPages =
-  typeof window !== 'undefined' && window.location.hostname.includes('github.io');
+const LIVE_BACKEND_URL = 'https://vibe-gram-jain-rishabh-2306.vercel.app';
 
-const apiBase = import.meta.env.VITE_API_URL
-  ? `${import.meta.env.VITE_API_URL.replace(/\/$/, '')}/api`
-  : '/api';
+const apiBase = import.meta.env.DEV
+  ? '/api'
+  : `${(import.meta.env.VITE_API_URL || LIVE_BACKEND_URL).replace(/\/$/, '')}/api`;
 
 const api = axios.create({
   baseURL: apiBase,
   withCredentials: true,
-  timeout: 15000,
+  timeout: 20000,
 });
 
 // Auto-refresh on 401
@@ -26,8 +24,8 @@ function processQueue(error: any, token: string | null = null) {
   failedQueue = [];
 }
 
-// Intercept request: inject Bearer token and handle mock environment
-api.interceptors.request.use(async (config) => {
+// Intercept request: inject Bearer token
+api.interceptors.request.use((config) => {
   if (typeof window !== 'undefined') {
     const token = localStorage.getItem('vibegram_token');
     if (token) {
@@ -39,14 +37,6 @@ api.interceptors.request.use(async (config) => {
       }
     }
   }
-
-  if (isGitHubPages) {
-    // Return mock response directly via an adapter-like behavior
-    const mockRes = await handleMockRequest(config);
-    if (mockRes) {
-      config.adapter = () => Promise.resolve(mockRes);
-    }
-  }
   return config;
 });
 
@@ -55,24 +45,7 @@ api.interceptors.response.use(
   async (err) => {
     const original = err.config;
 
-    // Fallback to mock backend if request failed due to missing server / 404
-    if (
-      err.response?.status === 404 ||
-      err.code === 'ERR_NETWORK' ||
-      err.code === 'ECONNABORTED' ||
-      !err.response
-    ) {
-      try {
-        const mockRes = await handleMockRequest(original);
-        if (mockRes) {
-          return mockRes;
-        }
-      } catch {
-        // fallback to normal error if mock fails
-      }
-    }
-
-    if (err.response?.status === 401 && !original._retry && original.url !== '/auth/refresh') {
+    if (err.response?.status === 401 && !original?._retry && original?.url !== '/auth/refresh') {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {
           failedQueue.push({ resolve, reject });
