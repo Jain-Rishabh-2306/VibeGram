@@ -1,0 +1,1 @@
+function e(t){const r=Math.floor(Date.now()/1e3)-t;return r<60?"just now":r<3600?`${Math.floor(r/60)}m ago`:r<86400?`${Math.floor(r/3600)}h ago`:r<604800?`${Math.floor(r/86400)}d ago`:new Date(t*1e3).toLocaleDateString("en-US",{month:"short",day:"numeric"})}function o(t){return t>=1e6?`${(t/1e6).toFixed(1)}M`:t>=1e3?`${(t/1e3).toFixed(1)}K`:String(t)}export{e as a,o as f};
